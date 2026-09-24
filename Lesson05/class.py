@@ -1,17 +1,26 @@
-class Student :
-    name = "harsh"
-
-    def greet(self):
-        print(self.name,"hello")
-
-student1 = Student()
-student1.greet()        
-
-# class Student1 :
-#     name = "aarav"
+# class Student :
+#     name = "harsh"
 
 #     def greet(self):
 #         print(self.name,"hello")
 
-# student1 = Student1()
-# student1.greet() 
+# student1 = Student()
+# student1.greet()        
+
+class Student1 :
+    name = "aarav"
+
+    def greet(self):
+        print(self.name,"hello")
+
+student1 = Student1()
+student1.greet() 
+
+class student:
+    name = "harsh"
+
+    def greet(self):
+        print("hello")
+
+harsh = student()
+harsh.greet()

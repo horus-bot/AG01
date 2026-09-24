@@ -7,3 +7,11 @@ print("Floor:", math.floor(4.8))
 print("Factorial:", math.factorial(5))
 
 print("Pi:", math.pi)
+
+
+
+##3
+
+import  math  
+print(math.sqrt(25))
+print(math.factorial(6))

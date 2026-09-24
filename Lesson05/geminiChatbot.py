@@ -6,7 +6,7 @@ class Chatbot:
 
     def __init__(self, name):
         self.name = name
-        # self.client = genai.Client(api_key="")
+        self.client = genai.Client()
 
     def chat(self, message):
 
