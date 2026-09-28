@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pokémon Championship — Gym Leader Harsh's Storm Arena</title>
+  <meta name="description" content="Step into the Pokémon Battle League, challenge Gym Leader Harsh, choose your starter champion, and survive his brutal roasts in this high-octane battle arena!">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800;900&family=Press+Start+2P&family=Cinzel:wght@700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Ambient Audio Indicator & Background Canvas -->
+  <canvas id="bg-canvas"></canvas>
+
+  <!-- Top App Navigation Bar -->
+  <header class="top-nav" id="top-nav">
+    <div class="nav-brand">
+      <div class="pokeball-icon pulse-glow"></div>
+      <div class="brand-text">
+        <span class="brand-title">POKÉMON LEAGUE</span>
+        <span class="brand-sub">REGIONAL CHAMPIONSHIP</span>
+      </div>
+    </div>
+
+    <div class="nav-trainer-status" id="nav-trainer-status" style="display: none;">
+      <div class="trainer-avatar-mini" id="nav-avatar">🧢</div>
+      <div class="trainer-info">
+        <div class="trainer-name-display" id="nav-player-name">Trainer</div>
+        <div class="trainer-badges" id="nav-badges-row">
+          <span class="badge-slot" title="Storm Badge" id="badge-harsh">⚡</span>
+          <span class="badge-slot locked" title="Cosmic Badge (Locked)">🔒</span>
+          <span class="badge-slot locked" title="Champion Crown (Locked)">👑</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="nav-actions">
+      <button class="nav-btn" id="btn-sound-toggle" title="Toggle Sound (Web Audio FX)" aria-label="Toggle Sound">
+        <span id="sound-icon">🔊</span>
+        <span class="btn-text">SOUND: ON</span>
+      </button>
+      <button class="nav-btn btn-gym-map" id="btn-gym-map" style="display: none;" title="Return to Gym Map">
+        <span>🗺️</span>
+        <span class="btn-text">GYM MAP</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main App Container for Switching Views -->
+  <main class="app-main" id="app-main">
+
+    <!-- ==================== VIEW 1: REGISTRATION ==================== -->
+    <section class="game-view view-active" id="view-intro">
+      <div class="intro-card glass-panel animate-fade-in">
+        <div class="intro-badge-glow"></div>
+        <div class="intro-hero-visual">
+          <div class="pokeball-large-animated"></div>
+          <div class="lightning-spark s1"></div>
+          <div class="lightning-spark s2"></div>
+        </div>
+
+        <h1 class="intro-title">POKÉMON CHAMPIONSHIP</h1>
+        <p class="intro-subtitle">Enter the official regional circuit. Test your strategy against elite gym leaders, starting with the notorious <strong class="text-electric">Gym Leader Harsh</strong>.</p>
+
+        <form class="intro-form" id="form-registration" onsubmit="return false;">
+          <div class="input-group">
+            <label for="input-trainer-name" class="input-label">REGISTER YOUR TRAINER NAME</label>
+            <div class="input-wrapper">
+              <span class="input-icon">⚡</span>
+              <input type="text" id="input-trainer-name" maxlength="15" placeholder="Enter your name (e.g. Red, Ash, Rahul)" autocomplete="off" required>
+            </div>
+            <p class="input-hint">Harsh will remember your name and personally roast you with it.</p>
+          </div>
+
+          <button type="submit" class="btn-primary btn-glow" id="btn-start-league">
+            <span>ENTER THE GYM LEAGUE</span>
+            <span class="btn-arrow">➔</span>
+          </button>
+        </form>
+
+        <div class="intro-roster-preview">
+          <span class="preview-tag">LEAGUE PARTNERS:</span>
+          <span class="preview-poke">⚡ Pikachu</span>
+          <span class="preview-poke">🔥 Charizard</span>
+          <span class="preview-poke">💧 Squirtle</span>
+          <span class="preview-poke">🌱 Bulbasaur</span>
+          <span class="preview-poke">👻 Gengar</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== VIEW 2: GYM LEADER SELECTION ==================== -->
+    <section class="game-view" id="view-hub">
+      <div class="hub-container animate-fade-in">
+        <div class="hub-header text-center">
+          <div class="section-pill">STAGE SELECT</div>
+          <h2 class="hub-title">CHAMPIONSHIP CIRCUIT</h2>
+          <p class="hub-subtitle">Defeat Gym Leaders in sequence to claim badges and unlock the Indigo Plateau.</p>
+        </div>
+
+        <div class="gym-cards-grid">
+          <!-- ROUND 1: HARSH (UNLOCKED) -->
+          <div class="gym-card gym-card-active glass-panel" id="card-gym-harsh">
+            <div class="card-status-badge status-unlocked">
+              <span class="status-dot"></span> ROUND 1: UNLOCKED
+            </div>
+            
+            <div class="gym-card-image-wrap">
+              <img id="img-harsh-avatar" class="trainer-portrait" src="" alt="Gym Leader Harsh">
+              <div class="gym-element-badge badge-electric">⚡ ELECTRIC</div>
+              <div class="harsh-glow-effect"></div>
+            </div>
+
+            <div class="gym-card-body">
+              <div class="gym-header-row">
+                <h3 class="gym-leader-name">HARSH</h3>
+                <span class="gym-title-sub">"THE ROOKIE SLAYER"</span>
+              </div>
+              <p class="gym-description">
+                Smug, sarcastic, and extremely proud of his high-voltage Luxray. He claims he's never lost to a challenger without roasting them first.
+              </p>
+
+              <div class="gym-stats-row">
+                <div class="stat-pill"><span class="stat-icon">⚡</span> Ace: Luxray (Lv. 52)</div>
+                <div class="stat-pill"><span class="stat-icon">🏆</span> Storm Badge</div>
+              </div>
+
+              <button class="btn-primary btn-challenge" id="btn-challenge-harsh">
+                <span>CHALLENGE HARSH</span>
+                <span class="btn-arrow">⚡</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- ROUND 2: ANUMITA (LOCKED) -->
+          <div class="gym-card gym-card-locked glass-panel" id="card-gym-anumita">
+            <div class="card-status-badge status-locked">
+              <span>🔒</span> ROUND 2: LOCKED
+            </div>
+
+            <div class="gym-card-image-wrap">
+              <img id="img-anumita-avatar" class="trainer-portrait locked-filter" src="" alt="Gym Leader Anumita">
+              <div class="gym-element-badge badge-psychic">🔮 PSYCHIC / DRAGON</div>
+              <div class="lock-overlay">
+                <div class="lock-icon-giant">🔒</div>
+                <span class="lock-label">DEFEAT HARSH FIRST</span>
+              </div>
+            </div>
+
+            <div class="gym-card-body">
+              <div class="gym-header-row">
+                <h3 class="gym-leader-name text-muted">ANUMITA</h3>
+                <span class="gym-title-sub">"THE CELESTIAL MASTER"</span>
+              </div>
+              <p class="gym-description text-muted">
+                Wields ancient mystic astral powers alongside Espeon and Dragonite. Harsh warned her you're not ready yet.
+              </p>
+
+              <div class="gym-stats-row">
+                <div class="stat-pill locked"><span class="stat-icon">🔮</span> Ace: Espeon & Dragonite</div>
+                <div class="stat-pill locked"><span class="stat-icon">⭐</span> Cosmic Badge</div>
+              </div>
+
+              <button class="btn-secondary btn-locked" id="btn-inspect-anumita">
+                <span>INSPECT GYM 2</span>
+                <span>🔒</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- ROUND 3: SWATHI (FINAL BOSS - LOCKED) -->
+          <div class="gym-card gym-card-locked glass-panel" id="card-gym-swathi">
+            <div class="card-status-badge status-champion-locked">
+              <span>👑</span> FINAL BOSS: LOCKED
+            </div>
+
+            <div class="gym-card-image-wrap">
+              <img id="img-swathi-avatar" class="trainer-portrait locked-filter" src="" alt="Supreme Champion Swathi">
+              <div class="gym-element-badge badge-champion">👑 SUPREME CHAMPION</div>
+              <div class="lock-overlay">
+                <div class="lock-icon-giant">👑</div>
+                <span class="lock-label">THE INDIGO THRONE</span>
+              </div>
+            </div>
+
+            <div class="gym-card-body">
+              <div class="gym-header-row">
+                <h3 class="gym-leader-name text-muted">SWATHI</h3>
+                <span class="gym-title-sub">"THE SUPREME CHAMPION"</span>
+              </div>
+              <p class="gym-description text-muted">
+                The undefeated ruler of the Regional League. Currently seated upon the Champion's Throne awaiting worthy legends.
+              </p>
+
+              <div class="gym-stats-row">
+                <div class="stat-pill locked"><span class="stat-icon">👑</span> Ace: Mega Gardevoir</div>
+                <div class="stat-pill locked"><span class="stat-icon">🏆</span> Champion Trophy</div>
+              </div>
+
+              <button class="btn-secondary btn-locked" id="btn-inspect-swathi">
+                <span>INSPECT FINAL BOSS</span>
+                <span>🔒</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== VIEW 3: POKÉMON SELECTION ==================== -->
+    <section class="game-view" id="view-select">
+      <div class="select-container animate-fade-in">
+        <div class="select-header text-center">
+          <div class="section-pill">PREPARATION PHASE</div>
+          <h2 class="select-title">CHOOSE YOUR POKÉMON</h2>
+          <p class="select-subtitle">Select your battle partner to face <span class="text-electric">Harsh's Luxray</span>. Pick wisely!</p>
+        </div>
+
+        <div class="pokemon-roster-grid" id="pokemon-roster">
+          <!-- 5 Pokemon Cards populated dynamically via JS -->
+        </div>
+
+        <div class="select-footer">
+          <button class="btn-secondary" id="btn-back-to-hub">
+            <span>⬅ RETURN TO STAGE MAP</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== VIEW 4: HARSH ROAST CUTSCENE ==================== -->
+    <section class="game-view" id="view-roast">
+      <div class="roast-container animate-fade-in">
+        <div class="roast-card glass-panel">
+          <div class="roast-top-bar">
+            <span class="stadium-badge">⚡ STORM GYM — PRE-BATTLE LOBBY</span>
+            <span class="live-tag"><span class="live-dot"></span> LIVE MIC</span>
+          </div>
+
+          <div class="roast-layout">
+            <div class="roast-trainer-column">
+              <div class="harsh-portrait-frame">
+                <img id="img-harsh-roast" class="roast-avatar" src="" alt="Gym Leader Harsh">
+                <div class="roast-nameplate">
+                  <span class="trainer-rank">GYM LEADER</span>
+                  <span class="trainer-name-highlight">HARSH</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="roast-dialogue-column">
+              <div class="roast-speech-bubble">
+                <div class="bubble-arrow"></div>
+                <div class="dialogue-speaker">HARSH SAYS:</div>
+                <div class="dialogue-text" id="roast-text-container">
+                  <!-- Typewriter funny roast inserted via JS -->
+                </div>
+              </div>
+
+              <div class="matchup-summary-box">
+                <div class="matchup-side player-side">
+                  <div class="side-tag">YOUR CHAMPION</div>
+                  <div class="side-poke-info" id="roast-player-poke">Pikachu</div>
+                </div>
+                <div class="matchup-vs">VS</div>
+                <div class="matchup-side opponent-side">
+                  <div class="side-tag">HARSH'S ACE</div>
+                  <div class="side-poke-info">⚡ Luxray (Lv. 52)</div>
+                </div>
+              </div>
+
+              <div class="roast-action-row">
+                <button class="btn-primary btn-glow btn-enter-fight" id="btn-start-battle">
+                  <span>BRING IT ON, HARSH! ENTER BATTLE ⚔️</span>
+                </button>
+                <button class="btn-secondary" id="btn-roast-change-poke">
+                  <span>CHANGE POKÉMON</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== VIEW 5: BATTLEGROUND ARENA ==================== -->
+    <section class="game-view" id="view-battle">
+      <div class="battle-arena-container animate-fade-in">
+        
+        <!-- Battle Top Stadium Header -->
+        <div class="battle-top-bar glass-panel">
+          <div class="battle-title-col">
+            <span class="arena-tag">⚡ STORM GYM CHAMPIONSHIP</span>
+            <span class="turn-status-badge" id="turn-badge">YOUR TURN</span>
+          </div>
+          <div class="battle-action-nav">
+            <button class="btn-micro" id="btn-battle-forfeit" title="Surrender battle">FORFEIT</button>
+          </div>
+        </div>
+
+        <!-- Stadium Visual Arena Stage -->
+        <div class="stadium-stage" id="stadium-stage">
+          <div class="stadium-crowd-silhouette"></div>
+          <div class="stadium-spotlight left"></div>
+          <div class="stadium-spotlight right"></div>
+          <div class="stadium-weather-fx" id="weather-fx"></div>
+
+          <!-- Opponent (Harsh & Luxray) Platform - Top Right -->
+          <div class="battle-side side-opponent" id="side-opponent">
+            <!-- Opponent HUD -->
+            <div class="pokemon-hud hud-opponent glass-panel" id="hud-opponent">
+              <div class="hud-top-line">
+                <span class="hud-name" id="opp-pokemon-name">Luxray</span>
+                <span class="hud-level">Lv. 52</span>
+              </div>
+              <div class="hud-sub-line">
+                <span class="hud-trainer-tag">TRAINER: HARSH</span>
+                <span class="hud-type-badge badge-electric" id="opp-type-badge">ELECTRIC</span>
+              </div>
+              <div class="hp-bar-container">
+                <div class="hp-bar-fill" id="opp-hp-fill" style="width: 100%;"></div>
+              </div>
+              <div class="hp-numeric-row">
+                <span class="hp-label">HP</span>
+                <span class="hp-values" id="opp-hp-values">230 / 230</span>
+              </div>
+            </div>
+
+            <!-- Opponent Pokemon Sprite & Base -->
+            <div class="pokemon-stage-anchor anchor-opponent">
+              <div class="pokemon-shadow"></div>
+              <div class="pokemon-aura electric-aura"></div>
+              <img id="opp-sprite" class="pokemon-sprite sprite-front" src="" alt="Opponent Pokemon">
+              <div class="damage-floater" id="opp-damage-float"></div>
+            </div>
+
+            <!-- Harsh Live Reaction Bubble -->
+            <div class="harsh-mini-reaction glass-panel" id="harsh-live-bubble">
+              <img id="harsh-mini-face" class="harsh-mini-img" src="" alt="Harsh">
+              <div class="harsh-mini-text" id="harsh-live-text">"Let's see what you've got!"</div>
+            </div>
+          </div>
+
+          <!-- Player Pokemon Platform - Bottom Left -->
+          <div class="battle-side side-player" id="side-player">
+            <!-- Player Pokemon Sprite & Base -->
+            <div class="pokemon-stage-anchor anchor-player">
+              <div class="pokemon-shadow"></div>
+              <div class="pokemon-aura player-aura" id="player-aura"></div>
+              <img id="player-sprite" class="pokemon-sprite sprite-back" src="" alt="Player Pokemon">
+              <div class="damage-floater" id="player-damage-float"></div>
+            </div>
+
+            <!-- Player HUD -->
+            <div class="pokemon-hud hud-player glass-panel" id="hud-player">
+              <div class="hud-top-line">
+                <span class="hud-name" id="player-pokemon-name">Pikachu</span>
+                <span class="hud-level">Lv. 50</span>
+              </div>
+              <div class="hud-sub-line">
+                <span class="hud-trainer-tag" id="player-trainer-tag">TRAINER: PLAYER</span>
+                <span class="hud-type-badge" id="player-type-badge">ELECTRIC</span>
+              </div>
+              <div class="hp-bar-container">
+                <div class="hp-bar-fill" id="player-hp-fill" style="width: 100%;"></div>
+              </div>
+              <div class="hp-numeric-row">
+                <span class="hp-label">HP</span>
+                <span class="hp-values" id="player-hp-values">200 / 200</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Battle Control Console -->
+        <div class="battle-console-grid">
+          <!-- Moves Box (2 Signature Moves as requested) -->
+          <div class="moves-panel glass-panel">
+            <div class="moves-header">
+              <span class="moves-title">COMMAND MOVES</span>
+              <span class="moves-hint">Select a move to strike</span>
+            </div>
+
+            <div class="moves-buttons-row">
+              <button class="btn-move" id="btn-move-1">
+                <div class="move-name-row">
+                  <span class="move-name" id="m1-name">Move 1</span>
+                  <span class="move-type-pill" id="m1-type">Type</span>
+                </div>
+                <div class="move-meta-row">
+                  <span class="move-pwr" id="m1-pwr">PWR: 50</span>
+                  <span class="move-acc" id="m1-acc">ACC: 95%</span>
+                </div>
+                <div class="move-desc" id="m1-desc">Move description</div>
+              </button>
+
+              <button class="btn-move" id="btn-move-2">
+                <div class="move-name-row">
+                  <span class="move-name" id="m2-name">Move 2</span>
+                  <span class="move-type-pill" id="m2-type">Type</span>
+                </div>
+                <div class="move-meta-row">
+                  <span class="move-pwr" id="m2-pwr">PWR: 65</span>
+                  <span class="move-acc" id="m2-acc">ACC: 85%</span>
+                </div>
+                <div class="move-desc" id="m2-desc">Move description</div>
+              </button>
+            </div>
+
+            <!-- Auxiliary Battle Utility Buttons -->
+            <div class="utility-row">
+              <button class="btn-util" id="btn-potion" title="Restore 60 HP (1 use per match)">
+                <span>🧪 POTION (RESTORE 60 HP)</span>
+                <span id="potion-stock" class="util-badge">1 LEFT</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Real-Time Battle Commentary Log -->
+          <div class="log-panel glass-panel">
+            <div class="log-header">
+              <span>BATTLE COMMENTARY</span>
+              <span class="log-indicator">🔴 REC</span>
+            </div>
+            <div class="battle-log-feed" id="battle-log-feed">
+              <div class="log-entry system-entry">Battle commencing! Harsh is eyeing your Pokémon with a sarcastic grin.</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+  </main>
+
+  <!-- ==================== MODAL: VICTORY SCREEN ==================== -->
+  <div class="modal-overlay" id="modal-victory">
+    <div class="modal-card victory-card glass-panel animate-scale-up">
+      <div class="modal-badge-banner">🏆 VICTORY ACHIEVED!</div>
+      
+      <div class="modal-content-grid">
+        <div class="modal-portrait-col">
+          <img id="img-harsh-defeat" class="modal-avatar defeat-shake" src="" alt="Harsh Defeated">
+          <div class="modal-avatar-caption">GYM LEADER HARSH — DEFEATED</div>
+        </div>
+
+        <div class="modal-text-col">
+          <h2 class="modal-title">HARSH HAS FALLEN!</h2>
+          <div class="harsh-quote-bubble">
+            <p id="victory-harsh-speech">
+              "Uhu... okay, okay, you beat me... 🙄 BUT I LITERALLY CREATED THIS GAME FOR YOU TO WIN! You really think you're Ash Ketchum now?! Don't let it go to your head! Anumita and Swathi would turn your Pokémon into dust anyway!"
+            </p>
+          </div>
+
+          <div class="reward-box">
+            <div class="reward-icon">⚡</div>
+            <div class="reward-details">
+              <div class="reward-title">STORM BADGE CLAIMED!</div>
+              <div class="reward-desc">Certified proof of triumph over Harsh's electric gym!</div>
+            </div>
+          </div>
+
+          <div class="modal-actions-row">
+            <button class="btn-primary btn-glow" id="btn-victory-rematch">
+              <span>REMATCH HARSH (RUB IT IN) 🔄</span>
+            </button>
+            <button class="btn-secondary" id="btn-victory-switch">
+              <span>TRY DIFFERENT POKÉMON 🎮</span>
+            </button>
+            <button class="btn-secondary" id="btn-victory-hub">
+              <span>RETURN TO GYM MAP 🗺️</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL: DEFEAT SCREEN ==================== -->
+  <div class="modal-overlay" id="modal-defeat">
+    <div class="modal-card defeat-card glass-panel animate-scale-up">
+      <div class="modal-badge-banner defeat-banner">💀 DEFEAT! POKÉMON FAINTED</div>
+      
+      <div class="modal-content-grid">
+        <div class="modal-portrait-col">
+          <img id="img-harsh-victory" class="modal-avatar laugh-bounce" src="" alt="Harsh Laughing">
+          <div class="modal-avatar-caption">HARSH IS LAUGHING AT YOU</div>
+        </div>
+
+        <div class="modal-text-col">
+          <h2 class="modal-title text-danger">WIPED OUT BY HARSH!</h2>
+          <div class="harsh-quote-bubble defeat-bubble">
+            <p id="defeat-harsh-speech">
+              "HAHAHAHA! Are you serious right now?! I gave you the strongest moves and you STILL managed to lose to my Gym?! My Luxray wasn't even using 10% of its battery power! Go back to Pallet Town and study Pokémon 101 from Professor Oak!"
+            </p>
+          </div>
+
+          <div class="modal-actions-row">
+            <button class="btn-primary btn-glow btn-danger" id="btn-defeat-rematch">
+              <span>REMATCH HARSH (REDEEM YOUR HONOR) ⚔️</span>
+            </button>
+            <button class="btn-secondary" id="btn-defeat-switch">
+              <span>SWITCH POKÉMON 🔄</span>
+            </button>
+            <button class="btn-secondary" id="btn-defeat-hub">
+              <span>RETURN TO GYM MAP 🗺️</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL: LOCKED GYM INFO ==================== -->
+  <div class="modal-overlay" id="modal-locked">
+    <div class="modal-card locked-card glass-panel animate-scale-up">
+      <div class="modal-badge-banner locked-banner" id="locked-modal-badge">🔒 LEVEL LOCKED</div>
+      
+      <div class="modal-content-grid">
+        <div class="modal-portrait-col">
+          <img id="img-locked-leader" class="modal-avatar locked-glow" src="" alt="Locked Gym Leader">
+          <div class="modal-avatar-caption" id="locked-leader-name">ELITE LEADER</div>
+        </div>
+
+        <div class="modal-text-col">
+          <h2 class="modal-title" id="locked-modal-title">ACCESS DENIED</h2>
+          <div class="harsh-quote-bubble locked-quote">
+            <p id="locked-modal-desc">
+              This gym is locked! Harsh specifically requested that no challengers enter until they can prove themselves against his electric lineup.
+            </p>
+          </div>
+
+          <div class="modal-actions-row">
+            <button class="btn-primary" id="btn-close-locked">
+              <span>UNDERSTOOD — TAKE ME TO HARSH ⚡</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Attack Visual FX Overlay Canvas -->
+  <div class="attack-vfx-layer" id="attack-vfx-layer"></div>
+
+  <!-- Audio Context & Game Logic -->
+  <script src="script.js"></script>
+</body>
+</html>
