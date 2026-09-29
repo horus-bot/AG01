@@ -253,6 +253,108 @@ const HARSH_BATTLE_TAUNTS = [
 ];
 
 // ==========================================
+// 1.5. FASTAPI BACKEND CLIENT (http://127.0.0.1:8000)
+// ==========================================
+const API_BASE_URL = 'http://127.0.0.1:8000';
+
+function formatMoveName(str) {
+  if (!str) return 'Strike';
+  return str.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+}
+
+// Fetch Pokemon details from GET /names?name={name}
+// Returns { name, health, height, weight }
+async function fetchPokemonDetailsFromAPI(pokemonName) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/names?name=${encodeURIComponent(pokemonName.toLowerCase())}`);
+    if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+    const data = await res.json();
+    return data;
+  } catch (err) {
+    console.warn(`[FastAPI] Failed to fetch details for ${pokemonName}:`, err);
+    return null;
+  }
+}
+
+// Fetch Pokemon moves from GET /pokemon/{name}/moves
+// Returns { pokemon, moves: [ { name, power }, ... ] }
+async function fetchPokemonMovesFromAPI(pokemonName) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/pokemon/${encodeURIComponent(pokemonName.toLowerCase())}/moves`);
+    if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+    const data = await res.json();
+    return data;
+  } catch (err) {
+    console.warn(`[FastAPI] Failed to fetch moves for ${pokemonName}:`, err);
+    return null;
+  }
+}
+
+// Synchronize a Pokemon object's stats, details, and 2 moves with live FastAPI responses
+async function syncPokemonDataWithAPI(pokeObj, pokemonKey) {
+  if (!pokeObj) return;
+  const lookupName = pokemonKey || pokeObj.id || pokeObj.name;
+
+  try {
+    // Parallel fetch from the two FastAPI endpoints
+    const [details, movesRes] = await Promise.all([
+      fetchPokemonDetailsFromAPI(lookupName),
+      fetchPokemonMovesFromAPI(lookupName)
+    ]);
+
+    if (details) {
+      if (details.name) {
+        pokeObj.apiOriginalName = details.name;
+        pokeObj.name = details.name.charAt(0).toUpperCase() + details.name.slice(1);
+      }
+      if (details.health !== undefined && details.health !== null) {
+        pokeObj.health = Number(details.health);
+        pokeObj.maxHp = Number(details.health);
+      }
+      if (details.height !== undefined && details.height !== null) {
+        pokeObj.height = details.height;
+      }
+      if (details.weight !== undefined && details.weight !== null) {
+        pokeObj.weight = details.weight;
+      }
+      pokeObj.apiLoaded = true;
+      console.log(`[FastAPI] Synced ${pokeObj.name}: HP/Health=${pokeObj.health}, Height=${pokeObj.height}, Weight=${pokeObj.weight}`);
+    }
+
+    if (movesRes && Array.isArray(movesRes.moves) && movesRes.moves.length > 0) {
+      const apiMoves = movesRes.moves.slice(0, 2);
+      apiMoves.forEach((m, idx) => {
+        const pwr = (m.power !== null && m.power !== undefined) ? Number(m.power) : 50;
+        const formattedName = formatMoveName(m.name);
+        if (!pokeObj.moves[idx]) {
+          pokeObj.moves[idx] = {
+            name: formattedName,
+            apiName: m.name,
+            type: pokeObj.type || 'Normal',
+            power: pwr,
+            damage: pwr,
+            accuracy: 95,
+            desc: `${pokeObj.name} strikes with ${formattedName}, dealing ${pwr} damage!`,
+            fxClass: pokeObj.moves[0]?.fxClass || 'vfx-lightning',
+            soundType: pokeObj.moves[0]?.soundType || 'slash'
+          };
+        } else {
+          pokeObj.moves[idx].name = formattedName;
+          pokeObj.moves[idx].apiName = m.name;
+          pokeObj.moves[idx].power = pwr;
+          pokeObj.moves[idx].damage = pwr;
+          pokeObj.moves[idx].desc = `${pokeObj.name} attacks with ${formattedName}, inflicting ${pwr} base power damage!`;
+        }
+      });
+      pokeObj.apiMovesLoaded = true;
+      console.log(`[FastAPI] Synced moves for ${pokeObj.name}:`, pokeObj.moves);
+    }
+  } catch (err) {
+    console.error(`[FastAPI] Error syncing ${lookupName}:`, err);
+  }
+}
+
+// ==========================================
 // 2. WEB AUDIO API PROCEDURAL SYNTHESIZER
 // ==========================================
 class SoundFXManager {
@@ -527,6 +629,25 @@ class PokemonGameController {
     this.renderPokemonRoster();
     this.bindEvents();
     initBackgroundCanvas();
+
+    // Asynchronously synchronize all Pokémon and moves from live FastAPI backend
+    this.syncAllPokemonWithAPI();
+  }
+
+  async syncAllPokemonWithAPI() {
+    try {
+      // Sync Harsh's Luxray
+      syncPokemonDataWithAPI(HARSH_POKEMON, 'luxray');
+
+      // Sync all roster pokemons from API
+      const rosterKeys = Object.keys(POKEMON_ROSTER);
+      for (const key of rosterKeys) {
+        await syncPokemonDataWithAPI(POKEMON_ROSTER[key], key);
+        this.renderPokemonRoster();
+      }
+    } catch (e) {
+      console.warn('[FastAPI] Sync warning:', e);
+    }
   }
 
   switchView(viewId) {
@@ -706,6 +827,10 @@ class PokemonGameController {
       card.style.setProperty('--card-glow', p.cardGlow);
       card.dataset.pokeId = p.id;
 
+      const hpVal = (p.health !== undefined && p.health !== null) ? p.health : p.maxHp;
+      const m1Pwr = (p.moves[0]?.power !== null && p.moves[0]?.power !== undefined) ? p.moves[0].power : (p.moves[0]?.damage || 50);
+      const m2Pwr = (p.moves[1]?.power !== null && p.moves[1]?.power !== undefined) ? p.moves[1].power : (p.moves[1]?.damage || 50);
+
       card.innerHTML = 
         '<div class="poke-card-visual">' +
           '<img src="' + p.artwork + '" alt="' + p.name + '" loading="lazy" onerror="this.src=\'' + p.spriteFront + '\'">' +
@@ -714,18 +839,17 @@ class PokemonGameController {
         '<h3 class="poke-name">' + p.name + '</h3>' +
         '<p class="poke-subtitle">' + p.title + '</p>' +
         '<div class="poke-stats-mini">' +
-          '<span>HP: ' + p.maxHp + '</span>' +
-          '<span>ATK: ' + p.attack + '</span>' +
-          '<span>SPD: ' + p.speed + '</span>' +
+          '<span>HP: ' + hpVal + '</span>' +
+          (p.height !== undefined ? '<span>HT: ' + p.height + '</span><span>WT: ' + p.weight + '</span>' : '<span>ATK: ' + p.attack + '</span><span>SPD: ' + p.speed + '</span>') +
         '</div>' +
         '<div class="poke-moves-list">' +
           '<div class="poke-move-tag">' +
-            '<span>⚡ ' + p.moves[0].name + '</span>' +
-            '<span>PWR ' + p.moves[0].power + '</span>' +
+            '<span>⚡ ' + (p.moves[0]?.name || 'Move 1') + '</span>' +
+            '<span>PWR ' + m1Pwr + '</span>' +
           '</div>' +
           '<div class="poke-move-tag">' +
-            '<span>💥 ' + p.moves[1].name + '</span>' +
-            '<span>PWR ' + p.moves[1].power + '</span>' +
+            '<span>💥 ' + (p.moves[1]?.name || 'Move 2') + '</span>' +
+            '<span>PWR ' + m2Pwr + '</span>' +
           '</div>' +
         '</div>' +
         '<button class="btn-primary btn-select-poke">' +
@@ -740,15 +864,22 @@ class PokemonGameController {
     });
   }
 
-  selectPokemon(pokemonId) {
+  async selectPokemon(pokemonId) {
     const poke = POKEMON_ROSTER[pokemonId];
     if (!poke) return;
-    this.selectedPokemon = poke;
+
+    // Ensure API details and moves are synchronized
+    if (!poke.apiLoaded || !poke.apiMovesLoaded) {
+      await syncPokemonDataWithAPI(poke, pokemonId);
+      this.renderPokemonRoster();
+    }
+
+    this.selectedPokemon = POKEMON_ROSTER[pokemonId];
     SFX.playSelect();
 
     // Prepare Roast Screen
-    document.getElementById('roast-player-poke').textContent = poke.name + ' (' + poke.type + ')';
-    const roastText = poke.harshRoast(this.playerName || 'Trainer');
+    document.getElementById('roast-player-poke').textContent = this.selectedPokemon.name + ' (' + this.selectedPokemon.type + ')';
+    const roastText = this.selectedPokemon.harshRoast(this.playerName || 'Trainer');
     this.typewriteRoast(roastText);
 
     this.switchView('view-roast');
@@ -771,17 +902,22 @@ class PokemonGameController {
     }, 25);
   }
 
-  // ==========================================
-  // BATTLE ENGINE
-  // ==========================================
-  startBattle() {
+  async startBattle() {
     if (!this.selectedPokemon) return;
+
+    // Ensure live API sync before battle starts
+    if (!this.selectedPokemon.apiLoaded || !this.selectedPokemon.apiMovesLoaded) {
+      await syncPokemonDataWithAPI(this.selectedPokemon, this.selectedPokemon.id);
+    }
+    if (!HARSH_POKEMON.apiLoaded || !HARSH_POKEMON.apiMovesLoaded) {
+      await syncPokemonDataWithAPI(HARSH_POKEMON, 'luxray');
+    }
 
     this.isBattleActive = true;
     this.isPlayerTurn = true;
     this.potionStock = 1;
-    this.playerHp = this.selectedPokemon.maxHp;
-    this.oppHp = HARSH_POKEMON.maxHp;
+    this.playerHp = (this.selectedPokemon.health !== undefined && this.selectedPokemon.health !== null) ? this.selectedPokemon.health : this.selectedPokemon.maxHp;
+    this.oppHp = (HARSH_POKEMON.health !== undefined && HARSH_POKEMON.health !== null) ? HARSH_POKEMON.health : HARSH_POKEMON.maxHp;
 
     // Setup Opponent Visuals
     document.getElementById('opp-pokemon-name').textContent = HARSH_POKEMON.name;
@@ -798,7 +934,7 @@ class PokemonGameController {
     playerSprite.src = this.selectedPokemon.spriteBack;
     playerSprite.onerror = () => { playerSprite.src = this.selectedPokemon.artwork; };
 
-    // Setup Moves Buttons
+    // Setup Moves Buttons with live moves & power from API
     this.setupMoveButton(1, this.selectedPokemon.moves[0]);
     this.setupMoveButton(2, this.selectedPokemon.moves[1]);
 
@@ -808,10 +944,15 @@ class PokemonGameController {
     document.getElementById('potion-stock').textContent = '1 LEFT';
 
     // Clear logs
+    const m1Pwr = (this.selectedPokemon.moves[0]?.power !== null && this.selectedPokemon.moves[0]?.power !== undefined) ? this.selectedPokemon.moves[0].power : 50;
+    const m2Pwr = (this.selectedPokemon.moves[1]?.power !== null && this.selectedPokemon.moves[1]?.power !== undefined) ? this.selectedPokemon.moves[1].power : 50;
     const logFeed = document.getElementById('battle-log-feed');
     logFeed.innerHTML = 
       '<div class="log-entry system-entry">' +
-        '⚡ BATTLE START: ' + this.playerName + '\'s ' + this.selectedPokemon.name + ' VS Harsh\'s ' + HARSH_POKEMON.name + '!' +
+        '⚡ BATTLE START: ' + this.playerName + '\'s ' + this.selectedPokemon.name + ' (HP: ' + this.playerHp + ') VS Harsh\'s ' + HARSH_POKEMON.name + ' (HP: ' + this.oppHp + ')!' +
+      '</div>' +
+      '<div class="log-entry system-entry">' +
+        '📡 API Synced: ' + this.selectedPokemon.name + ' moves: [' + this.selectedPokemon.moves[0].name + ' (PWR ' + m1Pwr + '), ' + this.selectedPokemon.moves[1].name + ' (PWR ' + m2Pwr + ')]' +
       '</div>';
 
     this.updateHpBars();
@@ -823,11 +964,12 @@ class PokemonGameController {
 
   setupMoveButton(index, move) {
     const btn = document.getElementById('btn-move-' + index);
-    document.getElementById('m' + index + '-name').textContent = move.name;
-    document.getElementById('m' + index + '-type').textContent = move.type;
-    document.getElementById('m' + index + '-pwr').textContent = 'PWR: ' + move.power;
-    document.getElementById('m' + index + '-acc').textContent = 'ACC: ' + move.accuracy + '%';
-    document.getElementById('m' + index + '-desc').textContent = move.desc;
+    const power = (move?.power !== null && move?.power !== undefined) ? move.power : (move?.damage || 50);
+    document.getElementById('m' + index + '-name').textContent = move?.name || ('Move ' + index);
+    document.getElementById('m' + index + '-type').textContent = move?.type || 'Normal';
+    document.getElementById('m' + index + '-pwr').textContent = 'PWR: ' + power;
+    document.getElementById('m' + index + '-acc').textContent = 'ACC: ' + (move?.accuracy || 95) + '%';
+    document.getElementById('m' + index + '-desc').textContent = move?.desc || (`${move?.name} strikes with ${power} base damage.`);
     btn.disabled = false;
   }
 
@@ -855,20 +997,22 @@ class PokemonGameController {
 
   updateHpBars() {
     // Opponent
-    const oppPct = Math.max(0, Math.min(100, Math.round((this.oppHp / HARSH_POKEMON.maxHp) * 100)));
+    const oppMax = (HARSH_POKEMON.health !== undefined && HARSH_POKEMON.health !== null) ? HARSH_POKEMON.health : HARSH_POKEMON.maxHp;
+    const oppPct = Math.max(0, Math.min(100, Math.round((this.oppHp / oppMax) * 100)));
     const oppFill = document.getElementById('opp-hp-fill');
     oppFill.style.width = oppPct + '%';
-    document.getElementById('opp-hp-values').textContent = Math.max(0, this.oppHp) + ' / ' + HARSH_POKEMON.maxHp;
+    document.getElementById('opp-hp-values').textContent = Math.max(0, this.oppHp) + ' / ' + oppMax;
 
     oppFill.className = 'hp-bar-fill';
     if (oppPct <= 25) oppFill.classList.add('hp-low');
     else if (oppPct <= 50) oppFill.classList.add('hp-mid');
 
     // Player
-    const playerPct = Math.max(0, Math.min(100, Math.round((this.playerHp / this.selectedPokemon.maxHp) * 100)));
+    const playerMax = (this.selectedPokemon.health !== undefined && this.selectedPokemon.health !== null) ? this.selectedPokemon.health : this.selectedPokemon.maxHp;
+    const playerPct = Math.max(0, Math.min(100, Math.round((this.playerHp / playerMax) * 100)));
     const playerFill = document.getElementById('player-hp-fill');
     playerFill.style.width = playerPct + '%';
-    document.getElementById('player-hp-values').textContent = Math.max(0, this.playerHp) + ' / ' + this.selectedPokemon.maxHp;
+    document.getElementById('player-hp-values').textContent = Math.max(0, this.playerHp) + ' / ' + playerMax;
 
     playerFill.className = 'hp-bar-fill';
     if (playerPct <= 25) playerFill.classList.add('hp-low');
@@ -921,23 +1065,24 @@ class PokemonGameController {
     this.setTurnIndicator(false);
 
     const move = this.selectedPokemon.moves[moveIndex];
-    SFX.playAttack(move.soundType);
-    this.triggerVFX(move.fxClass);
+    SFX.playAttack(move.soundType || 'electric');
+    this.triggerVFX(move.fxClass || 'vfx-lightning');
 
     // Accuracy check
     const roll = Math.random() * 100;
-    if (roll > move.accuracy) {
+    if (roll > (move.accuracy || 95)) {
       this.appendLog('❌ ' + this.selectedPokemon.name + '\'s <strong>' + move.name + '</strong> missed! Harsh laughs out loud!', 'player-action');
       this.updateHarshBubble('"Did you grease your fingers, ' + this.playerName + '?! Total miss!"');
       setTimeout(() => this.executeHarshTurn(), 1400);
       return;
     }
 
-    // Damage Calculation
+    // Damage Calculation based on move power / damage from API
+    const movePower = (move.power !== null && move.power !== undefined) ? Number(move.power) : (move.damage || 50);
     const isCrit = Math.random() < 0.18;
     const critMult = isCrit ? 1.5 : 1.0;
     const variance = (Math.random() * 8) - 4;
-    const damage = Math.max(15, Math.round((move.power * critMult) + variance));
+    const damage = Math.max(10, Math.round((movePower * critMult) + variance));
 
     this.oppHp -= damage;
     SFX.playHit();
@@ -946,7 +1091,7 @@ class PokemonGameController {
     this.updateHpBars();
 
     this.appendLog(
-      '💥 ' + this.selectedPokemon.name + ' used <strong>' + move.name + '</strong>! Dealt <strong>' + damage + ' DMG</strong>' + (isCrit ? ' (CRITICAL HIT!)' : '') + ' to Harsh\'s Luxray.',
+      '💥 ' + this.selectedPokemon.name + ' used <strong>' + move.name + '</strong>! Dealt <strong>' + damage + ' DMG</strong>' + (isCrit ? ' (CRITICAL HIT!)' : '') + ' to Harsh\'s ' + HARSH_POKEMON.name + '.',
       'player-action'
     );
 
@@ -970,8 +1115,9 @@ class PokemonGameController {
     document.getElementById('potion-stock').textContent = '0 LEFT';
     document.getElementById('btn-potion').disabled = true;
 
-    const healAmount = 60;
-    this.playerHp = Math.min(this.selectedPokemon.maxHp, this.playerHp + healAmount);
+    const maxHp = (this.selectedPokemon.health !== undefined && this.selectedPokemon.health !== null) ? this.selectedPokemon.health : this.selectedPokemon.maxHp;
+    const healAmount = Math.max(20, Math.round(maxHp * 0.4));
+    this.playerHp = Math.min(maxHp, this.playerHp + healAmount);
     SFX.playHeal();
     this.updateHpBars();
 
@@ -986,24 +1132,25 @@ class PokemonGameController {
   executeHarshTurn() {
     if (!this.isBattleActive) return;
 
-    // Pick one of Harsh's 2 signature moves
+    // Pick one of Harsh's 2 signature moves from API
     const move = HARSH_POKEMON.moves[Math.floor(Math.random() * HARSH_POKEMON.moves.length)];
-    SFX.playAttack(move.soundType);
-    this.triggerVFX(move.fxClass);
+    SFX.playAttack(move.soundType || 'electric');
+    this.triggerVFX(move.fxClass || 'vfx-lightning');
 
     // Accuracy Check
     const roll = Math.random() * 100;
-    if (roll > move.accuracy) {
-      this.appendLog('⚡ Harsh\'s Luxray used <strong>' + move.name + '</strong> but missed! Harsh curses under his breath!', 'opp-action');
+    if (roll > (move.accuracy || 95)) {
+      this.appendLog('⚡ Harsh\'s ' + HARSH_POKEMON.name + ' used <strong>' + move.name + '</strong> but missed! Harsh curses under his breath!', 'opp-action');
       this.updateHarshBubble('"Lag! I swear the stadium WiFi just lagged!"');
       this.setTurnIndicator(true);
       return;
     }
 
+    const movePower = (move.power !== null && move.power !== undefined) ? Number(move.power) : (move.damage || 45);
     const isCrit = Math.random() < 0.15;
     const critMult = isCrit ? 1.45 : 1.0;
     const variance = (Math.random() * 6) - 3;
-    const damage = Math.max(12, Math.round((move.power * critMult) + variance));
+    const damage = Math.max(10, Math.round((movePower * critMult) + variance));
 
     this.playerHp -= damage;
     SFX.playHit();
@@ -1012,7 +1159,7 @@ class PokemonGameController {
     this.updateHpBars();
 
     this.appendLog(
-      '⚡ Harsh\'s Luxray struck back with <strong>' + move.name + '</strong>! Inflicted <strong>' + damage + ' DMG</strong>' + (isCrit ? ' (CRITICAL!)' : '') + ' on ' + this.selectedPokemon.name + '.',
+      '⚡ Harsh\'s ' + HARSH_POKEMON.name + ' struck back with <strong>' + move.name + '</strong>! Inflicted <strong>' + damage + ' DMG</strong>' + (isCrit ? ' (CRITICAL!)' : '') + ' on ' + this.selectedPokemon.name + '.',
       'opp-action'
     );
 
