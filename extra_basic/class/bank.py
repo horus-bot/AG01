@@ -13,7 +13,20 @@ class BankBalance():
     def get_balance(self):
         return self.__balance
 
-account = BankBalance("harsh",500)
-account.deposit(200)
-account.withdraw(200)
-print(account.get_balance())
+    def account_type(self):
+        print("normal account")
+
+# account = BankBalance("harsh",500)
+# account.deposit(200)
+# account.withdraw(200)
+# print(account.get_balance())
+
+class StudentBalance(BankBalance):
+    def studentBenifit(self):
+        print(self.owner,"is a student hence he will get student benfit")
+
+    def account_type(self):
+        print("student account")
+
+harsh = StudentBalance("harsh",500)
+harsh.studentBenifit()
